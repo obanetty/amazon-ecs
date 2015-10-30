@@ -53,6 +53,9 @@ module Amazon
 
     OPENSSL_DIGEST = OpenSSL::Digest.new( 'sha256' ) if OPENSSL_DIGEST_SUPPORT
 
+    @open_timeout = 5
+    @read_timeout = 10
+
     @@options = {
       :version => "2011-08-01",
       :service => "AWSECommerceService"
@@ -127,7 +130,12 @@ module Amazon
       request_url = prepare_url(opts)
       log "Request URL: #{request_url}"
 
-      res = Net::HTTP.get_response(URI::parse(request_url))
+      uri = URI::parse(request_url)
+      res = Net::HTTP.start(uri.host, uri.port){|http|
+        http.open_timeout = @open_timeout
+        http.read_timeout = @read_timeout
+        http.get(uri.request_uri)
+      }
       unless res.kind_of? Net::HTTPSuccess
         raise Amazon::RequestError, "HTTP Response: #{res.code} #{res.message}"
       end
